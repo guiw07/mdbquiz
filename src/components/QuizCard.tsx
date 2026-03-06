@@ -57,9 +57,23 @@ const QuizCard = ({ question, onNext }: QuizCardProps) => {
       </div>
 
       {/* Question */}
-      <h2 className="text-xl font-heading font-semibold leading-relaxed text-foreground">
-        {question.question}
-      </h2>
+      <div className="text-foreground space-y-3">
+        {question.question.split('\n\n').map((block, i) => {
+          const isCode = block.includes('{') && block.includes('}') && (block.includes('db.') || block.includes('_id'));
+          if (isCode) {
+            return (
+              <pre key={i} className="p-4 rounded-lg bg-muted border border-border text-sm font-mono overflow-x-auto whitespace-pre-wrap">
+                {block}
+              </pre>
+            );
+          }
+          return (
+            <p key={i} className={i === 0 ? "text-xl font-heading font-semibold leading-relaxed" : "text-sm font-mono text-muted-foreground leading-relaxed"}>
+              {block}
+            </p>
+          );
+        })}
+      </div>
 
       {/* Options */}
       <div className="space-y-3">

@@ -6,9 +6,10 @@ import { toast } from "sonner";
 interface QuizCardProps {
   question: Question;
   onNext: () => void;
+  onResult: (isCorrect: boolean) => void;
 }
 
-const QuizCard = ({ question, onNext }: QuizCardProps) => {
+const QuizCard = ({ question, onNext, onResult }: QuizCardProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const answered = selectedIndex !== null;
   const isCorrect = selectedIndex === question.correctIndex;
@@ -16,6 +17,7 @@ const QuizCard = ({ question, onNext }: QuizCardProps) => {
   const handleSelect = (index: number) => {
     if (answered) return;
     setSelectedIndex(index);
+    onResult(index === question.correctIndex);
   };
 
   const copyCode = () => {

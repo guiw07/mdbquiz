@@ -1109,3 +1109,9 @@ export function getRandomQuestion(excludeIds: number[] = [], topic?: string): Qu
   pool = available.length > 0 ? available : pool;
   return pool[Math.floor(Math.random() * pool.length)];
 }
+
+export function getSequentialQuestion(currentIndex: number, topic?: string): { question: Question; nextIndex: number } {
+  const pool = topic ? questions.filter(q => q.topic === topic) : questions;
+  const idx = currentIndex % pool.length;
+  return { question: pool[idx], nextIndex: idx + 1 };
+}

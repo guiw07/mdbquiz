@@ -1,34 +1,66 @@
 import { useState, useCallback } from "react";
-import { getRandomQuestion, ALL_TOPICS } from "@/data/questions";
+import { getRandomQuestion, getSequentialQuestion, ALL_TOPICS } from "@/data/questions";
 import QuizCard from "@/components/QuizCard";
-import { Database, Filter } from "lucide-react";
+import { Database, Filter, Shuffle, ListOrdered, CheckCircle, XCircle } from "lucide-react";
 
 const Index = () => {
   const [selectedTopic, setSelectedTopic] = useState<string | undefined>();
   const [askedIds, setAskedIds] = useState<number[]>([]);
   const [question, setQuestion] = useState(() => getRandomQuestion());
   const [key, setKey] = useState(0);
+  const [isRandom, setIsRandom] = useState(true);
+  const [seqIndex, setSeqIndex] = useState(0);
+  const [correct, setCorrect] = useState(0);
+  const [wrong, setWrong] = useState(0);
 
-  const pickNext = useCallback(
-    (topic?: string, resetIds?: number[]) => {
-      const ids = resetIds ?? askedIds;
-      const next = getRandomQuestion([...ids, question.id], topic);
-      setAskedIds([...ids, question.id]);
+  const pickNext = useCallback(() => {
+    if (isRandom) {
+      const next = getRandomQuestion([...askedIds, question.id], selectedTopic);
+      setAskedIds(prev => [...prev, question.id]);
       setQuestion(next);
-      setKey((k) => k + 1);
-    },
-    [askedIds, question.id]
-  );
+    } else {
+      const { question: next, nextIndex } = getSequentialQuestion(seqIndex, selectedTopic);
+      setSeqIndex(nextIndex);
+      setQuestion(next);
+    }
+    setKey(k => k + 1);
+  }, [askedIds, question.id, isRandom, seqIndex, selectedTopic]);
 
-  const handleNext = useCallback(() => pickNext(selectedTopic), [pickNext, selectedTopic]);
+  const handleResult = useCallback((isCorrect: boolean) => {
+    if (isCorrect) setCorrect(c => c + 1);
+    else setWrong(w => w + 1);
+  }, []);
 
   const handleTopicChange = (topic?: string) => {
     setSelectedTopic(topic);
     setAskedIds([]);
-    const next = getRandomQuestion([], topic);
-    setQuestion(next);
-    setKey((k) => k + 1);
+    setSeqIndex(0);
+    if (isRandom) {
+      setQuestion(getRandomQuestion([], topic));
+    } else {
+      const { question: next, nextIndex } = getSequentialQuestion(0, topic);
+      setSeqIndex(nextIndex);
+      setQuestion(next);
+    }
+    setKey(k => k + 1);
   };
+
+  const toggleMode = () => {
+    const newRandom = !isRandom;
+    setIsRandom(newRandom);
+    setAskedIds([]);
+    setSeqIndex(0);
+    if (newRandom) {
+      setQuestion(getRandomQuestion([], selectedTopic));
+    } else {
+      const { question: next, nextIndex } = getSequentialQuestion(0, selectedTopic);
+      setSeqIndex(nextIndex);
+      setQuestion(next);
+    }
+    setKey(k => k + 1);
+  };
+
+  const total = correct + wrong;
 
   return (
     <div className="min-h-screen bg-background">
@@ -46,24 +78,65 @@ const Index = () => {
               <p className="text-xs text-muted-foreground">Associate Developer</p>
             </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-muted-foreground font-mono">Questions answered</p>
-            <p className="font-heading font-bold text-foreground text-lg text-glow">
-              {askedIds.length}
-            </p>
+          <div className="flex items-center gap-4">
+            {/* Score */}
+            <div className="flex items-center gap-3 text-sm font-mono">
+              <div className="flex items-center gap-1 text-success">
+                <CheckCircle className="w-4 h-4" />
+                <span className="font-bold">{correct}</span>
+              </div>
+              <div className="flex items-center gap-1 text-destructive">
+                <XCircle className="w-4 h-4" />
+                <span className="font-bold">{wrong}</span>
+              </div>
+              {total > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {Math.round((correct / total) * 100)}%
+                </span>
+              )}
+            </div>
+            <div className="w-px h-8 bg-border" />
+            {/* Count */}
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground font-mono">Answered</p>
+              <p className="font-heading font-bold text-foreground text-lg text-glow">
+                {total}
+              </p>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Topic Filter */}
-      <div className="max-w-2xl mx-auto px-6 pt-6">
-        <div className="flex items-center gap-2 mb-1">
-          <Filter className="w-4 h-4 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground font-mono uppercase tracking-wider">
-            Filter by topic
-          </span>
+      {/* Controls */}
+      <div className="max-w-2xl mx-auto px-6 pt-6 space-y-4">
+        {/* Mode toggle + Topic filter label */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground font-mono uppercase tracking-wider">
+              Filter by topic
+            </span>
+          </div>
+          <button
+            onClick={toggleMode}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono border border-border bg-card hover:border-primary/30 hover:text-foreground text-muted-foreground transition-colors"
+          >
+            {isRandom ? (
+              <>
+                <Shuffle className="w-3.5 h-3.5" />
+                Random
+              </>
+            ) : (
+              <>
+                <ListOrdered className="w-3.5 h-3.5" />
+                Sequential
+              </>
+            )}
+          </button>
         </div>
-        <div className="flex flex-wrap gap-2 mt-2">
+
+        {/* Topic chips */}
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => handleTopicChange(undefined)}
             className={`px-3 py-1.5 rounded-md text-xs font-mono border transition-colors ${
@@ -92,7 +165,7 @@ const Index = () => {
 
       {/* Main */}
       <main className="max-w-2xl mx-auto px-6 py-6">
-        <QuizCard key={key} question={question} onNext={handleNext} />
+        <QuizCard key={key} question={question} onNext={pickNext} onResult={handleResult} />
       </main>
     </div>
   );

@@ -1101,8 +1101,11 @@ export const questions: Question[] = [
   },
 ];
 
-export function getRandomQuestion(excludeIds: number[] = []): Question {
-  const available = questions.filter(q => !excludeIds.includes(q.id));
-  const pool = available.length > 0 ? available : questions;
+export const ALL_TOPICS = [...new Set(questions.map(q => q.topic))].sort();
+
+export function getRandomQuestion(excludeIds: number[] = [], topic?: string): Question {
+  let pool = topic ? questions.filter(q => q.topic === topic) : questions;
+  const available = pool.filter(q => !excludeIds.includes(q.id));
+  pool = available.length > 0 ? available : pool;
   return pool[Math.floor(Math.random() * pool.length)];
 }
